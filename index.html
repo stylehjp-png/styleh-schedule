@@ -1351,9 +1351,18 @@ function generateChartForPrint(printMinD, printMaxD) {
 
 // ===================== クラウド保存・読込 =====================
 let autoSaveTimer = null;
+let isSaving = false;
+let amIEditing = false; // 自分が編集中かどうか
+
 function scheduleAutoSave() {
+  amIEditing = true;
   clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => saveToCloud(), 2000);
+  autoSaveTimer = setTimeout(async () => {
+    if (!isSaving && amIEditing) {
+      await saveToCloud();
+      amIEditing = false;
+    }
+  }, 2000);
 }
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzIF5t644kJuk4y558dTjD1S45Ut3I4P_nH_5Z_aHZ0YRO42Ye3h4Up7zoVL2rXsK38zw/exec';
 
@@ -1375,7 +1384,35 @@ function showNotice(msg, type) {
 }
 
 // データをスプレッドシートに保存（POST方式）
+function checkDuplicates() {
+  const warnings = [];
+  projects.forEach(proj => {
+    const seen = {};
+    proj.rows.forEach(row => {
+      if (!row.phase || !row.start || !row.end) return;
+      const key = `${row.phase}_${row.start}_${row.end}`;
+      if (seen[key]) {
+        warnings.push(`「${proj.name || 'プロジェクト'}」に「${row.phase}」が重複しています`);
+      }
+      seen[key] = true;
+    });
+  });
+  return warnings;
+}
+
 async function saveToCloud() {
+  if (isSaving) return;
+
+  // 重複チェック
+  const warnings = checkDuplicates();
+  if (warnings.length > 0) {
+    const msg = warnings.join('\n') + '\n\n重複データが検出されました。このまま保存しますか？';
+    if (!confirm(msg)) {
+      return;
+    }
+  }
+
+  isSaving = true;
   showNotice('保存中…', 'loading');
   const rows = [];
   projects.forEach(proj => {
@@ -1408,6 +1445,8 @@ async function saveToCloud() {
     }
   } catch(e) {
     showNotice('保存に失敗しました', 'err');
+  } finally {
+    isSaving = false;
   }
 }
 
@@ -1450,10 +1489,12 @@ async function loadFromCloud() {
     counter = Math.max(...projects.map(p => p.id), 0);
     renderAll();
     showNotice('✓ データを読み込みました', 'ok');
+    amIEditing = false; // 読み込み時は保存しない
     setTimeout(() => generateChart(), 100);
     return true;
   } catch(e) {
     showNotice('オフラインモード（初期データを表示）', 'ok');
+    amIEditing = false; // 読み込み時は保存しない
     setTimeout(() => generateChart(), 100);
     return false;
   }
@@ -1510,9 +1551,9 @@ function setEditingLocked(locked) {
     overlay.id = 'lock-overlay';
     overlay.style.cssText = `
       position: fixed;
-      top: 56px; left: 0; right: 0; bottom: 0;
-      z-index: 98;
-      background: rgba(0,0,0,0.05);
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 200;
+      background: rgba(0,0,0,0.08);
       cursor: not-allowed;
       pointer-events: all;
     `;
@@ -1534,6 +1575,9 @@ function setEditingLocked(locked) {
     btn.disabled = locked;
     btn.style.opacity = locked ? '0.4' : '';
   });
+
+  // amIEditingもリセット
+  if (locked) amIEditing = false;
 }
 
 async function acquireLock(status = 'online') {
@@ -1551,8 +1595,8 @@ async function releaseLock() {
 }
 
 function startLockHeartbeat() {
-  // 8秒ごとにロックを更新（10秒でタイムアウトなので）
-  lockCheckInterval = setInterval(() => acquireLock(), 8 * 1000);
+  // 3秒ごとにロックを更新（5秒でタイムアウトなので）
+  lockCheckInterval = setInterval(() => acquireLock(), 3 * 1000);
 }
 
 // ページを離れる際にロック解除
@@ -1619,12 +1663,12 @@ function startLockCheck() {
       acquireLock();
     }
   });
-  // 10秒ごとに編集中チェック＋ロック更新
+  // 5秒ごとに編集中チェック＋ロック更新
   setInterval(() => {
     checkEditingLock().then(isLocked => {
       if (!isLocked) acquireLock();
     });
-  }, 10 * 1000);
+  }, 5 * 1000);
   startLockHeartbeat();
 }
 
@@ -1632,6 +1676,7 @@ function startLockCheck() {
 projects = JSON.parse(JSON.stringify(INITIAL_DATA));
 counter = 2;
 renderAll();
+amIEditing = false; // 初期表示時は保存しない
 
 // バックグラウンドでクラウドから読み込み（データがあれば上書き・スケジュールも自動生成）
 loadFromCloud();
