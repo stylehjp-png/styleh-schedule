@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>style-H プロジェクトスケジュール管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --surface2: #f0efe9;
+  --border: #dddbd3;
+  --border2: #c8c6bb;
+  --text: #1a1917;
+  --text2: #6b6860;
+  --text3: #9b9890;
+  --accent: #2b5ce6;
+  --accent-bg: #eef2fd;
+  --red: #d03030;
+  --blue-cal: #2563eb;
+  --green: #16a34a;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+header {
+  background: var(--text); color: #fff;
+  padding: 0 32px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+header h1 { font-size: 15px; font-weight: 500; letter-spacing: 0.04em; }
+.header-sub { font-size: 11px; color: rgba(255,255,255,0.4); margin-left: 16px; font-family: 'DM Mono', monospace; }
+.header-actions { display: flex; gap: 8px; }
+
+.btn { font-family: 'Noto Sans JP', sans-serif; font-size: 13px; font-weight: 500; padding: 7px 16px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; white-space: nowrap; }
+.btn-ghost { background: transparent; border-color: rgba(255,255,255,0.3); color: #fff; }
+.btn-ghost:hover { background: rgba(255,255,255,0.1); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: #1e4ed8; }
+.btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border2); }
+.btn-secondary:hover { background: var(--surface2); }
+.btn-sm { font-size: 12px; padding: 5px 12px; }
+.btn-icon { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 3px 6px; border-radius: 4px; line-height: 1; }
+.btn-icon:hover { background: #fdeaea; color: var(--red); }
+
+.main { max-width: 1200px; margin: 0 auto; padding: 28px 32px; }
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); }
+
+.project-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; overflow: visible; box-shadow: var(--shadow); }
+.project-card-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--surface2); border-radius: 10px 10px 0 0; }
+.proj-badge { width: 28px; height: 28px; border-radius: 8px; background: var(--text); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.proj-timestamp { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; white-space: nowrap; margin-left: auto; margin-right: 8px; }
+.ts-label { font-weight: 700; letter-spacing: 0.04em; }
+.ts-val { color: var(--text3); }
+.ts-val.updated { color: var(--accent); font-weight: 500; }
+.ts-sep { color: var(--border2); }
+.proj-name-input { flex: 1; font-family: 'Noto Sans JP', sans-serif; font-size: 14px; font-weight: 500; border: none; background: transparent; color: var(--text); outline: none; padding: 4px 0; border-bottom: 1.5px solid transparent; transition: border-color 0.15s; }
+.proj-name-input:focus { border-bottom-color: var(--accent); }
+.proj-name-input::placeholder { color: var(--text3); }
+
+.phases-body { padding: 12px 18px; }
+.step-hint { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--text3); margin-bottom: 12px; padding: 8px 12px; background: var(--surface2); border-radius: 6px; border: 1px dashed var(--border2); flex-wrap: wrap; }
+.step-badge { background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+.phase-table { width: 100%; border-collapse: collapse; }
+.phase-table thead th { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; padding: 0 8px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.phase-row td { padding: 6px 8px; border-bottom: 1px solid var(--bg); vertical-align: middle; }
+.phase-row:last-child td { border-bottom: none; }
+.phase-row:hover td { background: var(--surface2); }
+
+/* ── Phase Select with custom option ── */
+.phase-select-wrap { position: relative; display: inline-block; }
+.phase-select {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 12px; font-weight: 500;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text);
+  cursor: pointer; appearance: none; -webkit-appearance: none;
+  width: 150px; outline: none; transition: border-color 0.15s;
+}
+.phase-select:focus { border-color: var(--accent); }
+.phase-select-arrow { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 9px; color: var(--text3); }
+
+.phase-pill { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; color: #fff; letter-spacing: 0.02em; white-space: nowrap; }
+.custom-badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: #e8f5e9; color: var(--green); border: 1px solid #c8e6c9; margin-left: 4px; vertical-align: middle; }
+
+/* ── Custom phase input inline ── */
+.custom-phase-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.custom-phase-input {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 12px; padding: 5px 10px;
+  border: 1px solid var(--accent); border-radius: 6px;
+  background: var(--accent-bg); color: var(--text);
+  outline: none; width: 150px;
+  transition: border-color 0.15s;
+}
+.custom-phase-input:focus { border-color: var(--accent); }
+.btn-confirm {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 11px; font-weight: 700;
+  padding: 5px 10px; border-radius: 5px;
+  background: var(--green); color: #fff;
+  border: none; cursor: pointer;
+  transition: background 0.15s; white-space: nowrap;
+}
+.btn-confirm:hover { background: #15803d; }
+.btn-cancel-small {
+  font-size: 11px; padding: 5px 8px; border-radius: 5px;
+  background: none; border: 1px solid var(--border2);
+  color: var(--text3); cursor: pointer;
+}
+.btn-cancel-small:hover { background: var(--surface2); }
+
+/* Date */
+.date-cell { position: relative; }
+.date-btn { font-family: 'DM Mono', monospace; font-size: 12px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: border-color 0.15s; white-space: nowrap; }
+.date-btn:hover { border-color: var(--border2); background: var(--bg); }
+.date-btn .cal-icon { font-size: 11px; color: var(--text3); }
+.date-btn.unset { color: var(--text3); }
+
+.cal-popup { position: absolute; top: calc(100% + 5px); left: 0; z-index: 300; background: var(--surface); border: 1px solid var(--border2); border-radius: 10px; padding: 12px; width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); display: none; }
+.cal-popup.open { display: block; }
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cal-nav-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; width: 26px; height: 26px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; color: var(--text); transition: background 0.1s; }
+.cal-nav-btn:hover { background: var(--border); }
+.cal-month-label { font-size: 13px; font-weight: 500; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 1px; }
+.cal-dow { font-size: 10px; font-weight: 700; text-align: center; padding: 3px 0 6px; color: var(--text3); }
+.cal-dow.sat { color: var(--blue-cal); } .cal-dow.sun { color: var(--red); }
+.cal-day { font-family: 'DM Mono', monospace; font-size: 11px; text-align: center; padding: 4px 2px; border-radius: 5px; cursor: pointer; line-height: 1.4; transition: background 0.1s; }
+.cal-day:hover:not(.empty) { background: var(--accent-bg); color: var(--accent); }
+.cal-day.empty { cursor: default; pointer-events: none; }
+.cal-day.sat { color: var(--blue-cal); }
+.cal-day.hol, .cal-day.sun { color: var(--red); font-weight: 500; }
+.cal-day.selected { background: var(--accent) !important; color: #fff !important; font-weight: 700; }
+.cal-day.today { outline: 1.5px solid var(--accent); }
+.hol-name { font-size: 7px; line-height: 1; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.add-phase-btn { display: flex; align-items: center; gap: 6px; font-family: 'Noto Sans JP', sans-serif; font-size: 12px; color: var(--accent); background: none; border: 1px dashed var(--accent); border-radius: 6px; padding: 7px 14px; cursor: pointer; margin-top: 10px; transition: background 0.15s; width: 100%; justify-content: center; }
+.add-phase-btn:hover { background: var(--accent-bg); }
+
+/* Chart */
+.chart-section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-top: 24px; box-shadow: var(--shadow); overflow: hidden; }
+.chart-section-header { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface2); display: flex; align-items: center; justify-content: space-between; }
+.chart-section-title { font-size: 13px; font-weight: 500; }
+.chart-body { padding: 20px; overflow-x: auto; }
+.chart-inner { min-width: 700px; }
+.axis-year-row { display: flex; padding-left: 200px; margin-bottom: 0; }
+.axis-row { display: flex; padding-left: 200px; margin-bottom: 4px; }
+.axis-year { font-size: 10px; color: var(--text2); text-align: center; border-left: 1px solid var(--border); padding-left: 4px; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; padding-top: 2px; padding-bottom: 2px; background: var(--surface2); }
+.axis-month { font-size: 10px; color: var(--text3); text-align: center; border-left: 1px solid var(--border); padding-left: 4px; font-family: 'Noto Sans JP', sans-serif; font-weight: 500; }
+.gantt-row { display: flex; align-items: center; min-height: 40px; margin-bottom: 3px; position: relative; border-radius: 4px; transition: background 0.15s; }
+.gantt-row:hover { background: var(--surface2); }
+.gantt-label { width: 200px; flex-shrink: 0; padding-right: 12px; }
+.gantt-label-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gantt-label-date { font-size: 10px; color: var(--text3); white-space: nowrap; margin-top: 1px; }
+.gantt-label-staff { font-size: 10px; color: var(--accent); font-weight: 500; white-space: nowrap; margin-top: 1px; }
+.staff-section { padding: 8px 0 4px; }
+.staff-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.staff-label { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; }
+.staff-select { width: 120px !important; }
+.staff-pill { display:inline-flex; align-items:center; gap:3px; background:#4a4a6a; color:#fff; font-size:11px; font-weight:500; padding:2px 6px 2px 8px; border-radius:12px; }
+.staff-pill-del { background:none; border:none; color:rgba(255,255,255,0.7); cursor:pointer; font-size:13px; line-height:1; padding:0; }
+.staff-pill-del:hover { color:#fff; }
+.gantt-track { flex: 1; height: 26px; background: var(--surface2); border-radius: 5px; position: relative; border: 1px solid var(--border); overflow: visible; }
+.gantt-bar { position: absolute; height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.bar-text { color: #fff; font-weight: 700; white-space: nowrap; padding: 0 5px; pointer-events: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--surface2); }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+.legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.empty-state { text-align: center; padding: 48px; color: var(--text3); }
+.empty-state p { font-size: 13px; margin-top: 8px; }
+
+/* 印刷範囲指定ダイアログ */
+.print-dialog-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 500;
+  align-items: center; justify-content: center;
+}
+.print-dialog-overlay.open { display: flex; }
+.print-dialog {
+  background: var(--surface); border-radius: var(--border-radius-lg);
+  padding: 24px 28px; width: 380px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.print-dialog h3 { font-size: 15px; font-weight: 500; margin-bottom:16px; }
+.print-dialog-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.print-dialog-row label { font-size:12px; font-weight:500; color:var(--text2); width:60px; flex-shrink:0; }
+.print-dialog-row select {
+  flex:1; font-family:'Noto Sans JP',sans-serif; font-size:13px;
+  padding:7px 10px; border:1px solid var(--border2); border-radius:var(--border-radius-md);
+  background:var(--surface); color:var(--text); appearance:none; -webkit-appearance:none;
+}
+.print-dialog-btns { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+
+/* 印刷範囲クリップ用 */
+@media print {
+  .gantt-bar.print-hidden { display: none !important; }
+  .axis-month.print-hidden { visibility: hidden; }
+}
+.bottom-bar { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 12px 32px; display: flex; justify-content: flex-end; gap: 10px; box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
+
+/* 追加業務管理パネル */
+.custom-mgr { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+.custom-mgr-title { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+.custom-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.custom-tag { display: flex; align-items: center; gap: 4px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 20px; padding: 3px 10px 3px 8px; font-size: 11px; color: var(--green); font-weight: 500; }
+.custom-tag .remove-tag { background: none; border: none; cursor: pointer; color: #86b98a; font-size: 13px; line-height: 1; padding: 0 0 0 2px; }
+.custom-tag .remove-tag:hover { color: var(--red); }
+.custom-tag-empty { font-size: 11px; color: var(--text3); font-style: italic; }
+
+/* 今日ライン */
+.today-line { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #e53e3e; z-index: 10; pointer-events: none; }
+/* today-line label removed */
+/* gantt-track overflow managed above */
+@media print {
+  body { background: #fff; }
+  header { position: static; background: #1a1917 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .no-print, .bottom-bar { display: none !important; }
+  .project-card, .chart-section { box-shadow: none; break-inside: avoid; }
+  .cal-popup { display: none !important; }
+  .gantt-bar, .phase-pill, .today-line, .legend-dot, .legend, .legend-item, .staff-pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+/* スケジュールのみ印刷モード */
+body.print-schedule-only .main > .section-header,
+body.print-schedule-only #projects-container,
+body.print-schedule-only .main > div[style*='margin-top'] { display: none !important; }
+
+/* ═══════════════════════════════════════
+   レスポンシブ対応 (iPad / iPhone)
+═══════════════════════════════════════ */
+
+/* タッチ操作全般 */
+@media (hover: none) {
+  .date-btn, .phase-select, .add-phase-btn, .btn, .cal-day, .cal-nav-btn {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .date-btn { min-height: 44px; font-size: 13px; padding: 10px 12px; }
+  .cal-day { padding: 7px 2px; font-size: 12px; }
+  .cal-nav-btn { width: 36px; height: 36px; font-size: 16px; }
+  .phase-select { font-size: 16px; height: 44px; } /* iOSズーム防止 */
+  .custom-phase-input { font-size: 16px; } /* iOSズーム防止 */
+  .proj-name-input { font-size: 16px; } /* iOSズーム防止 */
+  .add-phase-btn { min-height: 44px; font-size: 13px; }
+  .btn-icon { width: 36px; height: 36px; font-size: 18px; display:flex; align-items:center; justify-content:center; }
+  .btn-confirm, .btn-cancel-small { min-height: 40px; padding: 8px 14px; font-size: 13px; }
+}
+
+/* iPad (768px〜1024px) */
+@media (max-width: 1024px) {
+  header { padding: 0 16px; height: 52px; }
+  .header-sub { display: none; }
+  .header-actions { gap: 5px; }
+  .btn-ghost { font-size: 11px; padding: 5px 9px; }
+  .main { padding: 16px; }
+  .phases-body { padding: 10px 12px; }
+  .project-card-header { padding: 10px 14px; gap: 8px; }
+  .proj-timestamp { display: none; } /* iPad以下では非表示 */
+  /* テーブルをスクロール可能に */
+  .phase-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .phase-table { min-width: 500px; }
+  .bottom-bar { padding: 10px 16px; gap: 8px; }
+}
+
+/* iPhone (〜767px) */
+@media (max-width: 767px) {
+  header { padding: 0 12px; height: 48px; }
+  header h1 { font-size: 13px; }
+  .header-actions { gap: 4px; }
+  .btn-ghost { font-size: 10px; padding: 4px 7px; border-radius: 5px; }
+  .main { padding: 12px; }
+  .section-header { margin-bottom: 10px; }
+
+  /* プロジェクトカード */
+  .project-card-header { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+  .proj-name-input { font-size: 15px; min-width: 0; }
+  .phases-body { padding: 10px; }
+
+  /* テーブル → カード形式に変換 */
+  .phase-table, .phase-table thead, .phase-table tbody,
+  .phase-table th, .phase-table td, .phase-table tr { display: block; }
+  .phase-table thead { display: none; }
+  .phase-row { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 10px; background: var(--surface); position: relative; }
+  .phase-row td { padding: 4px 0; border: none; }
+  .phase-row td:last-child { position: absolute; top: 8px; right: 8px; }
+  .phase-row:hover td { background: transparent; }
+
+  /* 日付ボタンを横並び */
+  .date-btn { width: 100%; justify-content: flex-start; }
+
+  /* カレンダーポップアップ: 画面中央固定 */
+  .cal-popup {
+    position: fixed !important;
+    top: 50% !important; left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 300px !important;
+    z-index: 1000;
+  }
+  .cal-day { padding: 8px 2px; font-size: 13px; }
+  .cal-nav-btn { width: 40px; height: 40px; }
+  .cal-month-label { font-size: 14px; }
+
+  /* カレンダー背景オーバーレイ */
+  .cal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 999; }
+  .cal-overlay.active { display: block; }
+
+  /* フェーズ選択 */
+  .phase-select { width: 100%; font-size: 16px; }
+  .phase-select-wrap { width: 100%; }
+  .custom-phase-row { flex-wrap: wrap; }
+  .custom-phase-input { width: 100%; }
+
+  /* ボトムバー */
+  .bottom-bar { padding: 10px 12px; flex-direction: column; gap: 8px; }
+  .bottom-bar .btn { width: 100%; justify-content: center; display: flex; padding: 12px; font-size: 14px; }
+
+  /* チャート */
+  .chart-body { padding: 12px 8px; }
+  .axis-year-row { padding-left: 100px; }
+  .axis-row { padding-left: 100px; }
+  .gantt-label { width: 100px; }
+  .gantt-label-name { font-size: 10px; }
+  .gantt-label-date { font-size: 9px; }
+  .chart-inner { min-width: 480px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center">
+    <h1>style-H プロジェクトスケジュール管理</h1>
+    <span class="header-sub">style-H PROJECT PLANNER</span>
+  </div>
+  <div class="header-actions no-print">
+    <div style="position:relative;display:inline-block">
+      <button class="btn btn-ghost btn-sm" onclick="togglePrintMenu(event)">印刷 / PDF保存 ▾</button>
+      <div id="print-menu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--border-radius-md);min-width:200px;z-index:200;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.15)">
+        <button onclick="printAll()" style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;font-family:'Noto Sans JP',sans-serif;color:var(--text)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">全体を印刷</button>
+        <button onclick="printScheduleOnly()" style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;font-family:'Noto Sans JP',sans-serif;color:var(--text);border-top:0.5px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">スケジュールのみ（期間指定）</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="loadFromCloud()">☁ 読み込む</button>
+    <button class="btn btn-ghost btn-sm" onclick="saveToCloud()">☁ 今すぐ保存</button>
+  </div>
+</header>
+
+<div class="print-dialog-overlay" id="print-dialog-overlay">
+  <div class="print-dialog">
+    <h3>印刷する期間を指定</h3>
+    <div class="print-dialog-row">
+      <label>開始月</label>
+      <select id="print-start-sel"></select>
+    </div>
+    <div class="print-dialog-row">
+      <label>終了月</label>
+      <select id="print-end-sel"></select>
+    </div>
+    <div class="print-dialog-btns">
+      <button class="btn btn-secondary btn-sm" onclick="closePrintDialog()">キャンセル</button>
+      <button class="btn btn-primary btn-sm" onclick="executePrint()">印刷 / PDF保存</button>
+    </div>
+  </div>
+</div>
+<div class="cal-overlay"  id="cal-overlay" onclick="closeCalOverlay()"></div>
+<div id="editing-notice" style="display:none;position:fixed;top:56px;left:0;right:0;z-index:99;background:#f59e0b;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:500;font-family:'Noto Sans JP',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.15)"></div>
+<div class="main">
+  <!-- スケジュールを最上位に表示 -->
+  <div id="chart-output"></div>
+
+  <!-- プロジェクト入力欄 -->
+  <div class="section-header no-print" style="margin-top:28px">
+    <span class="section-title">プロジェクト入力</span>
+    <button class="btn btn-secondary btn-sm" onclick="addProject()">＋ プロジェクトを追加</button>
+  </div>
+  <div id="projects-container"></div>
+</div>
+
+<div class="bottom-bar no-print">
+  <button class="btn btn-secondary" onclick="addProject()">＋ プロジェクトを追加</button>
+  <button class="btn btn-secondary" onclick="saveToCloud()">☁ 今すぐ保存</button>
+  <button class="btn btn-primary" onclick="generateChart()">スケジュールを更新 →</button>
+</div>
+
+<script>
+// ===================== 祝日計算 =====================
+function getHolidays(year) {
+  const h = {};
+  function add(m, d, name) { h[`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`] = name; }
+  function nthWd(y, m, nth, dow) {
+    let c = 0;
+    for (let d = 1; d <= 31; d++) {
+      const dt = new Date(y, m-1, d);
+      if (dt.getMonth() !== m-1) break;
+      if (dt.getDay() === dow && ++c === nth) return d;
+    }
+  }
+  add(1,1,'元日'); add(2,11,'建国記念の日'); add(2,23,'天皇誕生日');
+  add(4,29,'昭和の日'); add(5,3,'憲法記念日'); add(5,4,'みどりの日'); add(5,5,'こどもの日');
+  add(8,11,'山の日'); add(11,3,'文化の日'); add(11,23,'勤労感謝の日');
+  add(1, nthWd(year,1,2,1), '成人の日');
+  add(7, nthWd(year,7,3,1), '海の日');
+  add(9, nthWd(year,9,3,1), '敬老の日');
+  if (year !== 2020) add(10, nthWd(year,10,2,1), 'スポーツの日');
+  const sb = Math.floor(20.8431 + 0.242194*(year-1980) - Math.floor((year-1980)/4));
+  const au = Math.floor(23.2488 + 0.242194*(year-1980) - Math.floor((year-1980)/4));
+  add(3, sb, '春分の日'); add(9, au, '秋分の日');
+  const keys = Object.keys(h).sort();
+  const furikae = {};
+  keys.forEach(ds => {
+    const dt = new Date(ds + 'T00:00:00');
+    if (dt.getDay() === 0) {
+      let nx = new Date(dt); nx.setDate(nx.getDate()+1);
+      while (h[fmt(nx)] || furikae[fmt(nx)]) nx.setDate(nx.getDate()+1);
+      furikae[fmt(nx)] = '振替休日';
+    }
+  });
+  Object.assign(h, furikae);
+  for (let m = 1; m <= 12; m++) {
+    const dim = new Date(year, m, 0).getDate();
+    for (let d = 2; d < dim; d++) {
+      const ds = `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      if (h[ds]) continue;
+      const prev = fmt(new Date(year, m-1, d-1));
+      const next = fmt(new Date(year, m-1, d+1));
+      const dow = new Date(ds + 'T00:00:00').getDay();
+      if (h[prev] && h[next] && dow !== 0 && dow !== 6) h[ds] = '国民の休日';
+    }
+  }
+  return h;
+}
+function fmt(dt) { return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
+const holCache = {};
+function getHolName(ds) {
+  const y = parseInt(ds.slice(0,4));
+  if (!holCache[y]) holCache[y] = getHolidays(y);
+  return holCache[y][ds] || '';
+}
+
+// ===================== データ =====================
+// デフォルト業務リスト（全プロジェクト共通）
+const DEFAULT_STAFF = ["雨谷", "大良", "辻川"];
+let customStaff = []; // 追加担当者
+
+const DEFAULT_PHASES = ["基本設計","概算見積","方針決定","実施設計","実施見積","調整","仕様決定","準備","工事"];
+const DEFAULT_COLORS = ["#264478","#70AD47","#2E75B6","#264478","#70AD47","#2E75B6","#264478","#2E75B6","#C55A11"];
+
+// カスタム業務リスト（追加した業務をここに蓄積）
+let customPhases = []; // { name, color }
+
+// 追加業務用カラーパレット
+const CUSTOM_COLOR_POOL = [
+  "#7B68EE","#20B2AA","#FF8C00","#9370DB","#3CB371",
+  "#CD853F","#4682B4","#D2691E","#008B8B","#8B4513"
+];
+
+function getPhaseColor(name) {
+  const di = DEFAULT_PHASES.indexOf(name);
+  if (di >= 0) return DEFAULT_COLORS[di];
+  const ci = customPhases.find(c => c.name === name);
+  return ci ? ci.color : '#888888';
+}
+
+function allPhases() {
+  return [
+    ...DEFAULT_PHASES.map(n => ({ name: n, custom: false })),
+    ...customPhases.map(c => ({ name: c.name, custom: true }))
+  ];
+}
+
+let projects = [], counter = 0, activePopup = null, calState = {};
+// 入力中カスタム業務（rowId→入力値）
+let customInputState = {};
+
+function todayStr() { return fmt(new Date()); }
+function addDays(d, n) { const dt = new Date(d+'T00:00:00'); dt.setDate(dt.getDate()+n); return fmt(dt); }
+
+// ===================== プロジェクト =====================
+function nowStr() {
+  const d = new Date();
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}時${String(d.getMinutes()).padStart(2,'0')}分`;
+}
+function touchProject(proj) { proj.updatedAt = nowStr(); scheduleAutoSave(); if(myUsername) acquireLock(); }
+
+function addProject() {
+  const id = ++counter;
+  const proj = { id, name: '', rows: [], createdAt: nowStr(), updatedAt: nowStr() };
+  projects.push(proj);
+  renderAll();
+  setTimeout(() => { const el = document.getElementById(`proj-name-${id}`); if(el) el.focus(); }, 50);
+}
+function removeProject(id) { projects = projects.filter(p => p.id !== id); renderAll(); }
+function addPhaseRow(projId) {
+  const proj = projects.find(p => p.id === projId);
+  if (!proj) return;
+  // 直前の行の終了日があれば翌日を開始日にセット
+  const prevRow = proj.rows.length > 0 ? proj.rows[proj.rows.length - 1] : null;
+  const autoStart = (prevRow && prevRow.end) ? addDays(prevRow.end, 1) : '';
+  proj.rows.push({ id: Date.now() + Math.random(), phase: '', start: autoStart, end: '', isCustomInput: false });
+  touchProject(proj);
+  renderAll();
+}
+function removePhaseRow(projId, rowId) {
+  const proj = projects.find(p => p.id === projId);
+  if (!proj) return;
+  proj.rows = proj.rows.filter(r => r.id !== rowId);
+  delete customInputState[rowId];
+  touchProject(proj);
+  renderAll();
+}
+function removeCustomPhase(name) {
+  customPhases = customPhases.filter(c => c.name !== name);
+  // 使用中の行もリセット
+  projects.forEach(p => p.rows.forEach(r => { if (r.phase === name) r.phase = ''; }));
+  renderAll();
+}
+
+// ===================== セレクト変更ハンドラ =====================
+function onPhaseSelectChange(projId, rowId, val) {
+  const proj = projects.find(p => p.id === projId);
+  const row = proj && proj.rows.find(r => r.id == rowId);
+  if (!row) return;
+  if (val === '__custom__') {
+    row.phase = '';
+    row.isCustomInput = true;
+    customInputState[rowId] = '';
+  } else {
+    row.phase = val;
+    row.isCustomInput = false;
+    delete customInputState[rowId];
+    if (!row.start) {
+      const rowIdx = proj.rows.findIndex(r => r.id == rowId);
+      const prevRow = rowIdx > 0 ? proj.rows[rowIdx - 1] : null;
+      if (prevRow && prevRow.end) row.start = addDays(prevRow.end, 1);
+    }
+    touchProject(proj);
+  }
+  renderAll();
+}
+
+function onCustomInput(rowId, val) {
+  customInputState[rowId] = val;
+}
+
+function confirmCustomPhase(projId, rowId) {
+  const name = (customInputState[rowId] || '').trim();
+  if (!name) return;
+  const proj = projects.find(p => p.id === projId);
+  const row = proj && proj.rows.find(r => r.id == rowId);
+  if (!row) return;
+
+  // まだ登録されていなければ追加
+  if (!DEFAULT_PHASES.includes(name) && !customPhases.find(c => c.name === name)) {
+    const color = CUSTOM_COLOR_POOL[customPhases.length % CUSTOM_COLOR_POOL.length];
+    customPhases.push({ name, color });
+  }
+  row.phase = name;
+  row.isCustomInput = false;
+  delete customInputState[rowId];
+  touchProject(proj);
+  renderAll();
+}
+
+// ===================== 担当者操作 =====================
+function updateStaff(projId, val, pidx) {
+  const proj = projects.find(p => p.id === projId);
+  if (!proj) return;
+  if (!Array.isArray(proj.staff)) proj.staff = proj.staff ? [proj.staff] : [];
+  if (val === '__custom__') {
+    const inp = document.getElementById(`staff-input-${projId}`);
+    if (inp) inp.style.display = 'flex';
+    const sel = document.getElementById(`staff-sel-${projId}`);
+    if (sel) sel.value = '';
+  } else if (val && !proj.staff.includes(val) && proj.staff.length < 2) {
+    proj.staff.push(val);
+    touchProject(proj);
+    renderAll();
+  }
+}
+
+function removeStaff(projId, pidx, idx) {
+  const proj = projects.find(p => p.id === projId);
+  if (!proj || !Array.isArray(proj.staff)) return;
+  proj.staff.splice(idx, 1);
+  touchProject(proj);
+  renderAll();
+}
+
+function removeCustomStaff(name) {
+  customStaff = customStaff.filter(s => s !== name);
+  projects.forEach(p => {
+    if (Array.isArray(p.staff)) p.staff = p.staff.filter(s => s !== name);
+  });
+  renderAll();
+}
+
+function confirmStaff(projId, pidx, val) {
+  const name = (val || '').trim();
+  if (!name) return;
+  if (!DEFAULT_STAFF.includes(name) && !customStaff.includes(name)) {
+    customStaff.push(name);
+  }
+  const proj = projects.find(p => p.id === projId);
+  if (!proj) return;
+  if (!Array.isArray(proj.staff)) proj.staff = [];
+  if (!proj.staff.includes(name) && proj.staff.length < 2) {
+    proj.staff.push(name);
+    touchProject(proj);
+  }
+  renderAll();
+}
+
+function cancelStaff(projId) {
+  const inp = document.getElementById(`staff-input-${projId}`);
+  if (inp) inp.style.display = 'none';
+  renderAll();
+}
+
+function cancelCustomInput(projId, rowId) {
+  const proj = projects.find(p => p.id === projId);
+  const row = proj && proj.rows.find(r => r.id == rowId);
+  if (row) { row.phase = ''; row.isCustomInput = false; }
+  delete customInputState[rowId];
+  renderAll();
+}
+
+// ===================== レンダリング =====================
+function updateTimestamp(projId) {
+  const el = document.getElementById(`ts-${projId}`);
+  const proj = projects.find(p => p.id === projId);
+  if (!el || !proj) return;
+  // ISO形式の日時を「2026年4月22日 14:24」形式に変換
+  const fmtTs = (s) => {
+    if (!s) return '';
+    // ISO形式（2026-04-21T05:24:00.000Z）の場合
+    if (s.includes('T')) {
+      const d = new Date(s);
+      return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}時${String(d.getMinutes()).padStart(2,'0')}分`;
+    }
+    return s;
+  };
+  el.innerHTML = `
+    ${proj.createdAt ? `<span class="ts-label">作成</span><span class="ts-val">${fmtTs(proj.createdAt)}</span>` : ''}
+    ${proj.updatedAt && proj.updatedAt !== proj.createdAt ? `<span class="ts-sep">／</span><span class="ts-label">更新</span><span class="ts-val updated">${fmtTs(proj.updatedAt)}</span>` : ''}`;
+}
+
+function renderAll() {
+  renderProjects();
+}
+
+function fmtTimestamp(s) {
+  if (!s) return '';
+  if (s.includes('T')) {
+    const d = new Date(s);
+    return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}時${String(d.getMinutes()).padStart(2,'0')}分`;
+  }
+  return s;
+}
+
+function renderProjects() {
+  const c = document.getElementById('projects-container');
+  c.innerHTML = '';
+  projects.forEach((proj, pidx) => {
+    const card = document.createElement('div');
+    card.className = 'project-card';
+
+    // Header
+    card.innerHTML = `
+      <div class="project-card-header">
+        <div class="proj-badge">${String(pidx+1).padStart(2,'0')}</div>
+        <input id="proj-name-${proj.id}" class="proj-name-input" value="${proj.name}"
+          oninput="projects[${pidx}].name=this.value; touchProject(projects[${pidx}]); updateTimestamp(${proj.id}); scheduleAutoSave()"
+          placeholder="① プロジェクト名を入力してください">
+        <div class="proj-timestamp no-print" id="ts-${proj.id}">
+          ${proj.createdAt ? `<span class="ts-label">作成</span><span class="ts-val">${fmtTimestamp(proj.createdAt)}</span>` : ''}
+          ${proj.updatedAt && proj.updatedAt !== proj.createdAt ? `<span class="ts-sep">／</span><span class="ts-label">更新</span><span class="ts-val updated">${fmtTimestamp(proj.updatedAt)}</span>` : ''}
+        </div>
+        <div class="proj-timestamp print-only" style="font-size:10px;color:#666;margin-left:auto;font-family:'DM Mono',monospace">
+          更新: ${fmtTimestamp(proj.updatedAt || proj.createdAt || '')}
+        </div>
+        <button class="btn-icon no-print" onclick="removeProject(${proj.id})">×</button>
+      </div>`;
+
+    const body = document.createElement('div');
+    body.className = 'phases-body';
+
+    // 担当者セクション
+    const staffDiv = document.createElement('div');
+    staffDiv.className = 'staff-section no-print';
+    const allStaffOpts = [...DEFAULT_STAFF, ...customStaff]
+      .map(s => `<option value="${s}" ${proj.staff===s?'selected':''}>${s}</option>`).join('');
+    const staffArr = Array.isArray(proj.staff) ? proj.staff : (proj.staff ? [proj.staff] : []);
+    const canAddMore = staffArr.length < 2;
+    const staffPills = staffArr.map((s,si) =>
+      `<span class="staff-pill">${s}<button class="staff-pill-del" onclick="removeStaff(${proj.id},${pidx},${si})" title="削除">×</button></span>`
+    ).join('');
+    const allStaffOptsFiltered = [...DEFAULT_STAFF, ...customStaff]
+      .filter(s => !staffArr.includes(s))
+      .map(s => `<option value="${s}">${s}</option>`).join('');
+
+    // 追加済み担当者の削除ボタン付きパネル
+    const customStaffMgr = customStaff.length > 0 ? `
+      <div class="custom-mgr" style="margin-top:6px">
+        <div class="custom-mgr-title"><span>追加済み担当者</span><span style="font-size:10px;color:var(--text3);font-weight:400">×で削除</span></div>
+        <div class="custom-tags">${customStaff.map(s =>
+          `<div class="custom-tag">${s}<button class="remove-tag" onclick="removeCustomStaff('${s}')">×</button></div>`
+        ).join('')}</div>
+      </div>` : '';
+
+    staffDiv.innerHTML = `
+      <div class="staff-row">
+        <span class="staff-label">担当者</span>
+        ${staffPills}
+        ${canAddMore ? `
+        <div class="phase-select-wrap">
+          <select class="phase-select staff-select" onchange="updateStaff(${proj.id}, this.value, ${pidx})" id="staff-sel-${proj.id}">
+            <option value="">── 選択 ──</option>
+            ${allStaffOptsFiltered}
+            <option value="__custom__">＋ 担当者を追加…</option>
+          </select>
+          <span class="phase-select-arrow">▾</span>
+        </div>` : ''}
+        <div id="staff-input-${proj.id}" style="display:none;margin-left:8px" class="custom-phase-row">
+          <input class="custom-phase-input" placeholder="担当者名を入力"
+            onkeydown="if(event.key==='Enter') confirmStaff(${proj.id},${pidx},this.value)">
+          <button class="btn-confirm" onclick="confirmStaff(${proj.id},${pidx},this.previousElementSibling.value)">追加</button>
+          <button class="btn-cancel-small" onclick="cancelStaff(${proj.id})">キャンセル</button>
+        </div>
+      </div>
+      ${customStaffMgr}`;
+    body.appendChild(staffDiv);
+
+    // 追加業務パネル（カスタムがあれば表示）
+    if (customPhases.length > 0) {
+      const mgrDiv = document.createElement('div');
+      mgrDiv.className = 'custom-mgr no-print';
+      mgrDiv.innerHTML = `
+        <div class="custom-mgr-title">
+          <span>追加済み業務</span>
+          <span style="font-size:10px;color:var(--text3);font-weight:400">クリックで削除</span>
+        </div>
+        <div class="custom-tags">
+          ${customPhases.map(cp => `
+            <div class="custom-tag">
+              <span style="width:10px;height:10px;border-radius:2px;background:${cp.color};display:inline-block;flex-shrink:0"></span>
+              ${cp.name}
+              <button class="remove-tag" onclick="removeCustomPhase('${cp.name}')" title="削除">×</button>
+            </div>`).join('')}
+        </div>`;
+      body.appendChild(mgrDiv);
+    }
+
+    // Step hint
+    const hint = document.createElement('div');
+    hint.className = 'step-hint no-print';
+    hint.innerHTML = `
+      <div class="step-badge">②</div> 業務を選択（プルダウン下部から新規追加も可）&nbsp;→&nbsp;
+      <div class="step-badge">③</div> 開始日 &nbsp;→&nbsp;
+      <div class="step-badge">④</div> 終了日`;
+    body.appendChild(hint);
+
+    if (proj.rows.length > 0) {
+      const tableWrap = document.createElement('div');
+      tableWrap.className = 'phase-table-wrap';
+      const table = document.createElement('table');
+      table.className = 'phase-table';
+      table.innerHTML = `<thead><tr>
+        <th>業務</th><th>開始日</th><th>終了日</th><th class="no-print"></th>
+      </tr></thead>`;
+      const tbody = document.createElement('tbody');
+
+      // 開始日順に並び替えて表示（入力欄も同様）
+      const displayRows = [...proj.rows].sort((a, b) => {
+        if (!a.start) return 1;
+        if (!b.start) return -1;
+        return new Date(a.start+'T00:00:00') - new Date(b.start+'T00:00:00');
+      });
+
+      displayRows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = 'phase-row';
+        const phaseColor = row.phase ? getPhaseColor(row.phase) : null;
+        const isCustom = customPhases.find(c => c.name === row.phase);
+
+        // セレクトのHTML
+        const optionsHTML = [
+          `<option value="">── 業務を選択 ──</option>`,
+          ...DEFAULT_PHASES.map(p => `<option value="${p}" ${row.phase===p?'selected':''}>${p}</option>`),
+          customPhases.length > 0
+            ? `<optgroup label="── 追加業務 ──">${customPhases.map(cp => `<option value="${cp.name}" ${row.phase===cp.name?'selected':''}>${cp.name}</option>`).join('')}</optgroup>`
+            : '',
+          `<option value="__custom__">＋ 新しい業務を追加…</option>`
+        ].join('');
+
+        // 業務列
+        let phaseCell = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">`;
+        if (row.isCustomInput) {
+          // カスタム入力モード
+          phaseCell += `
+            <div class="custom-phase-row">
+              <input class="custom-phase-input" id="ci-${row.id}"
+                placeholder="業務名を入力"
+                value="${customInputState[row.id] || ''}"
+                oninput="onCustomInput(${row.id}, this.value)"
+                onkeydown="if(event.key==='Enter') confirmCustomPhase(${proj.id},${row.id})">
+              <button class="btn-confirm" onclick="confirmCustomPhase(${proj.id},${row.id})">追加</button>
+              <button class="btn-cancel-small" onclick="cancelCustomInput(${proj.id},${row.id})">キャンセル</button>
+            </div>`;
+        } else {
+          phaseCell += `
+            <div class="phase-select-wrap no-print">
+              <select class="phase-select" onchange="onPhaseSelectChange(${proj.id},${row.id},this.value)">
+                ${optionsHTML}
+              </select>
+              <span class="phase-select-arrow">▾</span>
+            </div>`;
+          if (row.phase) {
+            phaseCell += `<span class="phase-pill" style="background:${phaseColor}">${row.phase}</span>`;
+            if (isCustom) phaseCell += `<span class="custom-badge">追加</span>`;
+          }
+        }
+        phaseCell += `</div>`;
+
+        tr.innerHTML = `
+          <td>${phaseCell}</td>
+          <td class="date-cell">
+            <button class="date-btn ${row.start?'':'unset'} no-print" onclick="openCal(event,${proj.id},${row.id},'start')">
+              <span class="cal-icon">📅</span>
+              <span>${row.start ? row.start.replace(/-/g,'/') : '開始日を選択'}</span>
+            </button>
+            <span style="display:none;font-size:12px;font-family:'DM Mono',monospace" class="print-only">${row.start||'―'}</span>
+            <div class="cal-popup" id="cal-${proj.id}-${row.id}-start"></div>
+          </td>
+          <td class="date-cell">
+            <button class="date-btn ${row.end?'':'unset'} no-print" onclick="openCal(event,${proj.id},${row.id},'end')">
+              <span class="cal-icon">📅</span>
+              <span>${row.end ? row.end.replace(/-/g,'/') : '終了日を選択'}</span>
+            </button>
+            <span style="display:none;font-size:12px;font-family:'DM Mono',monospace" class="print-only">${row.end||'―'}</span>
+            <div class="cal-popup" id="cal-${proj.id}-${row.id}-end"></div>
+          </td>
+          <td class="no-print" style="text-align:center">
+            <button class="btn-icon" onclick="removePhaseRow(${proj.id},${row.id})">×</button>
+          </td>`;
+        tbody.appendChild(tr);
+
+        // カスタム入力後にフォーカス
+        if (row.isCustomInput) {
+          setTimeout(() => { const el = document.getElementById(`ci-${row.id}`); if(el) el.focus(); }, 30);
+        }
+      });
+      table.appendChild(tbody);
+      tableWrap.appendChild(table);
+      body.appendChild(tableWrap);
+    }
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-phase-btn no-print';
+    addBtn.innerHTML = '＋ 業務を追加';
+    addBtn.onclick = () => addPhaseRow(proj.id);
+    body.appendChild(addBtn);
+    card.appendChild(body);
+    c.appendChild(card);
+  });
+}
+
+// ===================== カレンダー =====================
+function openCal(e, projId, rowId, type) {
+  e.stopPropagation();
+  const id = `cal-${projId}-${rowId}-${type}`;
+  const popup = document.getElementById(id);
+  if (!popup) return;
+  if (activePopup && activePopup !== popup) { activePopup.classList.remove('open'); }
+  if (popup.classList.contains('open')) { popup.classList.remove('open'); activePopup = null; return; }
+  const proj = projects.find(p => p.id === projId);
+  const row = proj && proj.rows.find(r => r.id == rowId);
+  // 終了日未設定の場合は開始日をデフォルト表示
+  const cur = (row && row[type]) || (type === 'end' && row && row.start) || todayStr();
+  const [y, m] = cur.split('-').map(Number);
+  calState[id] = { projId, rowId, type, year: y, month: m-1 };
+  renderCal(popup, y, m-1, cur, projId, rowId, type);
+  popup.classList.add('open');
+  activePopup = popup;
+  if (window.innerWidth <= 767) document.getElementById('cal-overlay').classList.add('active');
+}
+
+function renderCal(popup, year, month, selDate, projId, rowId, type) {
+  const mNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  if (!holCache[year]) holCache[year] = getHolidays(year);
+  const first = new Date(year, month, 1).getDay();
+  const dim = new Date(year, month+1, 0).getDate();
+  const ts = todayStr();
+  const id = `cal-${projId}-${rowId}-${type}`;
+  let grid = '<div class="cal-grid">';
+  ['日','月','火','水','木','金','土'].forEach((d,i) => {
+    grid += `<div class="cal-dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`;
+  });
+  for (let i = 0; i < first; i++) grid += '<div class="cal-day empty"></div>';
+  for (let d = 1; d <= dim; d++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(year, month, d).getDay();
+    const hn = getHolName(ds);
+    let cls = 'cal-day';
+    if (dow === 6) cls += ' sat';
+    if (dow === 0 || hn) cls += ' hol';
+    if (ds === selDate) cls += ' selected';
+    if (ds === ts) cls += ' today';
+    const sub = hn ? `<div class="hol-name" title="${hn}">${hn}</div>` : '';
+    grid += `<div class="${cls}" onclick="selDate('${ds}',${projId},${rowId},'${type}','${id}')">${d}${sub}</div>`;
+  }
+  grid += '</div>';
+  popup.innerHTML = `
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="shiftMon(event,'${id}',${projId},${rowId},'${type}',-1)">‹</button>
+      <span class="cal-month-label">${year}年 ${mNames[month]}</span>
+      <button class="cal-nav-btn" onclick="shiftMon(event,'${id}',${projId},${rowId},'${type}',1)">›</button>
+    </div>${grid}`;
+}
+
+function shiftMon(e, id, projId, rowId, type, d) {
+  e.stopPropagation();
+  const popup = document.getElementById(id);
+  const st = calState[id] || {};
+  let nm = (st.month !== undefined ? st.month : 0) + d, ny = st.year || new Date().getFullYear();
+  if (nm < 0) { nm = 11; ny--; } if (nm > 11) { nm = 0; ny++; }
+  calState[id] = { ...st, year: ny, month: nm };
+  const proj = projects.find(p => p.id === projId);
+  const row = proj && proj.rows.find(r => r.id == rowId);
+  const cur = (row && row[type]) || todayStr();
+  renderCal(popup, ny, nm, cur, projId, rowId, type);
+}
+
+function selDate(ds, projId, rowId, type, calId) {
+  const proj = projects.find(p => p.id === projId);
+  const row = proj && proj.rows.find(r => r.id == rowId);
+  if (row) row[type] = ds;
+  touchProject(proj);
+  renderAll();
+  if (activePopup) { activePopup.classList.remove('open'); activePopup = null; }
+}
+
+function closeCalOverlay() {
+  if (activePopup) { activePopup.classList.remove('open'); activePopup = null; }
+  document.getElementById('cal-overlay').classList.remove('active');
+}
+
+document.addEventListener('click', () => {
+  if (activePopup) { activePopup.classList.remove('open'); activePopup = null; }
+  document.getElementById('cal-overlay').classList.remove('active');
+});
+
+// ===================== チャート生成 =====================
+function generateChart() {
+  const out = document.getElementById('chart-output');
+
+  // 3ヶ月前の日付を計算
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 3);
+  cutoff.setHours(0, 0, 0, 0);
+
+  const STAFF_ORDER = ["雨谷", "大良", "辻川", ...customStaff];
+
+  const validProjs = projects.map(p => ({
+    ...p, rows: p.rows.filter(r => r.phase && r.start && r.end)
+  })).filter(p => {
+    if (p.rows.length === 0) return false;
+    const latestEnd = Math.max(...p.rows.map(r => new Date(r.end+'T00:00:00').getTime()));
+    return latestEnd >= cutoff.getTime();
+  }).sort((a, b) => {
+    // 担当者の最初の1人目で並び替え
+    const staffA = Array.isArray(a.staff) ? a.staff[0] : (a.staff || '');
+    const staffB = Array.isArray(b.staff) ? b.staff[0] : (b.staff || '');
+    const idxA = STAFF_ORDER.indexOf(staffA);
+    const idxB = STAFF_ORDER.indexOf(staffB);
+    const rankA = idxA === -1 ? 999 : idxA;
+    const rankB = idxB === -1 ? 999 : idxB;
+    return rankA - rankB;
+  });
+
+  if (!validProjs.length) {
+    out.innerHTML = `<div class="chart-section"><div class="empty-state">
+      <b>スケジュールデータがありません</b>
+      <p>業務・開始日・終了日がすべて入力された行が必要です</p>
+    </div></div>`;
+    return;
+  }
+
+  let minD = null, maxD = null;
+  validProjs.forEach(p => p.rows.forEach(r => {
+    const s = new Date(r.start+'T00:00:00'), e = new Date(r.end+'T00:00:00');
+    if (!minD || s < minD) minD = s;
+    if (!maxD || e > maxD) maxD = e;
+  }));
+  // 表示開始は「3ヶ月前の月初」以降に制限
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  threeMonthsAgo.setDate(1);
+  threeMonthsAgo.setHours(0, 0, 0, 0);
+  if (minD < threeMonthsAgo) minD = threeMonthsAgo;
+  minD = new Date(minD.getFullYear(), minD.getMonth(), 1);
+  maxD = new Date(maxD.getFullYear(), maxD.getMonth()+1, 0);
+  const total = (maxD - minD) / 86400000 + 1;
+
+  const months = []; let cur = new Date(minD);
+  while (cur <= maxD) {
+    const y = cur.getFullYear(), m = cur.getMonth();
+    const end = new Date(y, m+1, 0);
+    const used = months.reduce((a,b) => a+b.days, 0);
+    months.push({ year: y, month: m+1, days: Math.min((end-minD)/86400000+1,total)-used });
+    cur = new Date(y, m+1, 1);
+  }
+
+  // 年ごとにグループ化して上段に年、下段に月を表示
+  // 印刷ダイアログ用にmonthsをグローバルに保存
+  window._chartMonths = months;
+
+  const yearGroups = {};
+  months.forEach(mo => {
+    if (!yearGroups[mo.year]) yearGroups[mo.year] = 0;
+    yearGroups[mo.year] += mo.days;
+  });
+  const yearAxisHTML = '<div class="axis-year-row">' + Object.entries(yearGroups).map(([y, days]) =>
+    `<div class="axis-year" style="width:${(days/total*100).toFixed(2)}%">${y}年</div>`
+  ).join('') + '</div>';
+  const monthAxisHTML = '<div class="axis-row">' + months.map(mo =>
+    `<div class="axis-month" style="width:${(mo.days/total*100).toFixed(2)}%">${mo.month}月</div>`
+  ).join('') + '</div>';
+  const axisHTML = yearAxisHTML + monthAxisHTML;
+
+  const rowsHTML = validProjs.map(proj => {
+    // 業務を開始日の早い順に並び替え
+    const sortedRows = [...proj.rows].sort((a, b) => {
+      if (!a.start) return 1;
+      if (!b.start) return -1;
+      return new Date(a.start+'T00:00:00') - new Date(b.start+'T00:00:00');
+    });
+    const barsHTML = sortedRows.map(r => {
+      let s = new Date(r.start+'T00:00:00');
+      const e = new Date(r.end+'T00:00:00');
+      // 開始日が表示範囲より前の場合はminDにクリップ
+      if (s < minD) s = new Date(minD);
+      if (e < minD) return ''; // 終了日も範囲外なら非表示
+      const left = (s-minD)/86400000/total*100;
+      const width = ((e-s)/86400000+1)/total*100;
+      const color = getPhaseColor(r.phase);
+      return `<div class="gantt-bar" data-label="${r.phase}" title="${r.phase}"
+        style="left:${Math.max(left,0).toFixed(2)}%;width:${Math.max(width,0.3).toFixed(2)}%;background:${color}">
+        <span class="bar-text" style="pointer-events:none"></span>
+      </div>`;
+    }).join('');
+    const label = (proj.name && proj.name.trim()) ? proj.name.trim() : `（名称未設定 ${proj.id}）`;
+    // 更新日の整形
+    const updStr = proj.updatedAt || proj.createdAt || '';
+    let updLabel = '';
+    if (updStr) {
+      const fmtU = (s) => {
+        if (s.includes('T')) {
+          const d = new Date(s);
+          return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日更新`;
+        }
+        // "2026年4月22日 14時24分" 形式
+        const m = s.match(/(\d+)年(\d+)月(\d+)日/);
+        if (m) return `${m[1]}年${m[2]}月${m[3]}日更新`;
+        return '';
+      };
+      const r = fmtU(updStr);
+      if (r) updLabel = `（${r}）`;
+    }
+    // 今日ラインの位置計算（各trackに描画）
+    const todayD = new Date(todayStr()+'T00:00:00');
+    const todayLeft = (todayD - minD) / 86400000 / total * 100;
+    const todayLineHTML = (todayD >= minD && todayD <= maxD)
+      ? `<div class="today-line" style="left:${todayLeft.toFixed(2)}%"></div>` : '';
+    const staffArr2 = Array.isArray(proj.staff) ? proj.staff : (proj.staff ? [proj.staff] : []);
+    const staffLabel = staffArr2.length > 0 ? `<div class="gantt-label-staff">${staffArr2.join(' / ')}</div>` : '';
+    return `<div class="gantt-row" style="cursor:pointer" onclick="scrollToProject(${proj.id})" title="${label}へ移動">
+      <div class="gantt-label">
+        <div class="gantt-label-name" title="${label}">${label}</div>
+        ${staffLabel}
+        ${updLabel ? `<div class="gantt-label-date">${updLabel}</div>` : ''}
+      </div>
+      <div class="gantt-track">${barsHTML}${todayLineHTML}</div>
+    </div>`;
+  }).join('');
+
+  // 凡例：全業務を固定で表示（順番通り）+ カスタム業務
+  const PHASE_ORDER = ["基本設計","概算見積","方針決定","実施設計","実施見積","調整","仕様決定","準備","工事"];
+  const allLegendPhases = [...PHASE_ORDER, ...customPhases.map(cp => cp.name)];
+  const legendHTML = '<div class="legend">' + allLegendPhases.map(ph =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${getPhaseColor(ph)}"></div>${ph}</div>`
+  ).join('') + '</div>';
+
+  out.innerHTML = `<div class="chart-section">
+    <div class="chart-section-header">
+      <span class="chart-section-title">プロジェクトスケジュール</span>
+      <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">作成日: ${(()=>{const d=new Date();return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+'時'+String(d.getMinutes()).padStart(2,'0')+'分';})()} </span>
+    </div>
+    <div class="chart-body"><div class="chart-inner">${axisHTML}${rowsHTML}</div></div>
+    ${legendHTML}
+  </div>`;
+
+  requestAnimationFrame(fitBars);
+  out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function scrollToProject(projId) {
+  // プロジェクトカードを探してスクロール
+  const cards = document.querySelectorAll('.project-card');
+  let targetCard = null;
+  projects.forEach((proj, idx) => {
+    if (proj.id === projId) {
+      targetCard = cards[idx];
+    }
+  });
+  if (targetCard) {
+    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // ハイライト効果
+    targetCard.style.outline = '2px solid var(--accent)';
+    setTimeout(() => { targetCard.style.outline = ''; }, 1500);
+  }
+}
+
+function fitBars() {
+  document.querySelectorAll('.gantt-track').forEach(track => {
+    track.querySelectorAll('.gantt-bar').forEach(bar => {
+      const label = bar.getAttribute('data-label');
+      const span = bar.querySelector('.bar-text');
+      const bw = bar.getBoundingClientRect().width;
+      let chosen = null;
+      for (let fs = 11; fs >= 7; fs--) {
+        span.style.fontSize = fs + 'px'; span.textContent = label;
+        if (span.scrollWidth <= bw - 6) { chosen = fs; break; }
+      }
+      if (!chosen) span.textContent = ''; else span.style.fontSize = chosen + 'px';
+    });
+  });
+}
+
+function togglePrintMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('print-menu');
+  const isOpen = menu.style.display === 'block';
+  menu.style.display = isOpen ? 'none' : 'block';
+}
+
+function closePrintMenu(e) {
+  const menu = document.getElementById('print-menu');
+  if (!menu) return;
+  // メニュー内のクリックは無視
+  if (e && menu.contains(e.target)) return;
+  menu.style.display = 'none';
+}
+
+document.addEventListener('click', closePrintMenu);
+
+function printAll() {
+  window.print();
+}
+
+function printScheduleOnly() {
+  // チャートが生成されていない場合は先に生成
+  const chartOut = document.getElementById('chart-output');
+  if (!chartOut.querySelector('.chart-section')) {
+    generateChart();
+  }
+  // グローバルに保存されたmonthsデータを直接使用
+  if (!window._chartMonths || window._chartMonths.length === 0) { window.print(); return; }
+  const months = window._chartMonths.map((mo, i) => ({
+    label: `${mo.year}/${String(mo.month).padStart(2,'0')}`,
+    display: `${mo.year}年${mo.month}月`,
+    idx: i
+  }));
+
+  // 今月の3か月前・6か月後をデフォルトに設定
+  const now = new Date();
+  const defaultStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+  const defaultEnd   = new Date(now.getFullYear(), now.getMonth() + 6, 1);
+  const fmtYM = (d) => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}`;
+  const startDefault = fmtYM(defaultStart);
+  const endDefault   = fmtYM(defaultEnd);
+
+  const startSel = document.getElementById('print-start-sel');
+  const endSel   = document.getElementById('print-end-sel');
+  startSel.innerHTML = months.map((m,i) =>
+    `<option value="${i}" ${m.label===startDefault?'selected':''}>${m.display}</option>`
+  ).join('');
+  endSel.innerHTML = months.map((m,i) =>
+    `<option value="${i}" ${m.label===endDefault?'selected':i===months.length-1&&endDefault>months[months.length-1].label?'selected':''}>${m.display}</option>`
+  ).join('');
+
+  document.getElementById('print-dialog-overlay').classList.add('open');
+}
+
+function closePrintDialog() {
+  document.getElementById('print-dialog-overlay').classList.remove('open');
+}
+
+function executePrint() {
+  const startIdx = parseInt(document.getElementById('print-start-sel').value);
+  const endIdx   = parseInt(document.getElementById('print-end-sel').value);
+  if (startIdx > endIdx) {
+    alert('開始月は終了月より前に設定してください');
+    return;
+  }
+  closePrintDialog();
+
+  // 選択された月ラベルから日付範囲を取得
+  const startSel = document.getElementById('print-start-sel');
+  const endSel   = document.getElementById('print-end-sel');
+  const startLabel = startSel.options[startIdx].text; // 例: "2026年1月"
+  const endLabel   = endSel.options[endIdx].text;
+
+  const parseYM = (label) => {
+    const m = label.match(/(\d+)年(\d+)月/);
+    if (!m) return null;
+    return new Date(parseInt(m[1]), parseInt(m[2])-1, 1);
+  };
+  const printMinD = parseYM(startLabel);
+  const printMaxD = parseYM(endLabel);
+  if (!printMinD || !printMaxD) return;
+  // 終了月の末日
+  printMaxD.setMonth(printMaxD.getMonth()+1);
+  printMaxD.setDate(printMaxD.getDate()-1);
+
+  // 印刷用にチャートを再生成（期間を絞って）
+  generateChartForPrint(printMinD, printMaxD);
+
+  document.body.classList.add('print-schedule-only');
+  setTimeout(() => {
+    window.print();
+    document.body.classList.remove('print-schedule-only');
+    // 印刷後は通常のチャートに戻す
+    generateChart();
+  }, 300);
+}
+
+function generateChartForPrint(printMinD, printMaxD) {
+  // cutoffは印刷範囲の開始日
+  const cutoff = new Date(printMinD);
+  cutoff.setHours(0,0,0,0);
+
+  const STAFF_ORDER = ["雨谷", "大良", "辻川", ...customStaff];
+  const validProjs = projects.map(p => ({
+    ...p, rows: p.rows.filter(r => r.phase && r.start && r.end)
+  })).filter(p => {
+    if (p.rows.length === 0) return false;
+    const latestEnd = Math.max(...p.rows.map(r => new Date(r.end+'T00:00:00').getTime()));
+    return latestEnd >= cutoff.getTime();
+  }).sort((a, b) => {
+    const staffA = Array.isArray(a.staff) ? a.staff[0] : (a.staff || '');
+    const staffB = Array.isArray(b.staff) ? b.staff[0] : (b.staff || '');
+    const idxA = STAFF_ORDER.indexOf(staffA); const idxB = STAFF_ORDER.indexOf(staffB);
+    return (idxA===-1?999:idxA) - (idxB===-1?999:idxB);
+  });
+
+  if (!validProjs.length) return;
+
+  const minD = new Date(printMinD.getFullYear(), printMinD.getMonth(), 1);
+  const maxD = new Date(printMaxD.getFullYear(), printMaxD.getMonth()+1, 0);
+  const total = (maxD - minD) / 86400000 + 1;
+
+  const months = []; let cur = new Date(minD);
+  while (cur <= maxD) {
+    const y = cur.getFullYear(), m = cur.getMonth();
+    const end = new Date(y, m+1, 0);
+    const used = months.reduce((a,b) => a+b.days, 0);
+    months.push({ year: y, month: m+1, days: Math.min((end-minD)/86400000+1,total)-used });
+    cur = new Date(y, m+1, 1);
+  }
+
+  const yearGroups = {};
+  months.forEach(mo => { if (!yearGroups[mo.year]) yearGroups[mo.year]=0; yearGroups[mo.year]+=mo.days; });
+  const yearAxisHTML = '<div class="axis-year-row">'+Object.entries(yearGroups).map(([y,days]) =>
+    `<div class="axis-year" style="width:${(days/total*100).toFixed(2)}%">${y}年</div>`).join('')+'</div>';
+  const monthAxisHTML = '<div class="axis-row">'+months.map(mo =>
+    `<div class="axis-month" style="width:${(mo.days/total*100).toFixed(2)}%">${mo.month}月</div>`).join('')+'</div>';
+  const axisHTML = yearAxisHTML + monthAxisHTML;
+
+  const rowsHTML = validProjs.map(proj => {
+    const sortedRows = [...proj.rows].sort((a,b) => {
+      if(!a.start) return 1; if(!b.start) return -1;
+      return new Date(a.start+'T00:00:00') - new Date(b.start+'T00:00:00');
+    });
+    const barsHTML = sortedRows.map(r => {
+      let s = new Date(r.start+'T00:00:00');
+      const e = new Date(r.end+'T00:00:00');
+      if (s < minD) s = new Date(minD);
+      if (e < minD || s > maxD) return '';
+      const left = (s-minD)/86400000/total*100;
+      const width = ((Math.min(e,maxD)-s)/86400000+1)/total*100;
+      const color = getPhaseColor(r.phase);
+      return `<div class="gantt-bar" data-label="${r.phase}" title="${r.phase}"
+        style="left:${Math.max(left,0).toFixed(2)}%;width:${Math.max(width,0.3).toFixed(2)}%;background:${color}">
+        <span class="bar-text" style="pointer-events:none"></span>
+      </div>`;
+    }).join('');
+
+    const label = (proj.name && proj.name.trim()) ? proj.name.trim() : `（名称未設定 ${proj.id}）`;
+    const updStr = proj.updatedAt || proj.createdAt || '';
+    let updLabel = '';
+    if (updStr) {
+      const fmtU = (s) => {
+        if (s.includes('T')) { const d=new Date(s); return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日更新`; }
+        const m = s.match(/(\d+)年(\d+)月(\d+)日/);
+        if (m) return `${m[1]}年${m[2]}月${m[3]}日更新`;
+        return '';
+      };
+      const r = fmtU(updStr); if (r) updLabel = `（${r}）`;
+    }
+    const staffArr2 = Array.isArray(proj.staff) ? proj.staff : (proj.staff ? [proj.staff] : []);
+    const staffLabel = staffArr2.length > 0 ? `<div class="gantt-label-staff">${staffArr2.join(' / ')}</div>` : '';
+    const todayD = new Date(todayStr()+'T00:00:00');
+    const todayLeft = (todayD - minD) / 86400000 / total * 100;
+    const todayLineHTML = (todayD >= minD && todayD <= maxD)
+      ? `<div class="today-line" style="left:${todayLeft.toFixed(2)}%"></div>` : '';
+
+    return `<div class="gantt-row">
+      <div class="gantt-label">
+        <div class="gantt-label-name" title="${label}">${label}</div>
+        ${staffLabel}
+        ${updLabel ? `<div class="gantt-label-date">${updLabel}</div>` : ''}
+      </div>
+      <div class="gantt-track">${barsHTML}${todayLineHTML}</div>
+    </div>`;
+  }).join('');
+
+  const PHASE_ORDER = ["基本設計","概算見積","方針決定","実施設計","実施見積","調整","仕様決定","準備","工事"];
+  const allLegendPhases = [...PHASE_ORDER, ...customPhases.map(cp => cp.name)];
+  const legendHTML = '<div class="legend">'+allLegendPhases.map(ph =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${getPhaseColor(ph)}"></div>${ph}</div>`
+  ).join('')+'</div>';
+
+  const out = document.getElementById('chart-output');
+  out.innerHTML = `<div class="chart-section">
+    <div class="chart-section-header">
+      <span class="chart-section-title">プロジェクトスケジュール</span>
+      <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace">作成日: ${(()=>{const d=new Date();return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+'時'+String(d.getMinutes()).padStart(2,'0')+'分';})()} </span>
+    </div>
+    <div class="chart-body"><div class="chart-inner">${axisHTML}${rowsHTML}</div></div>
+    ${legendHTML}
+  </div>`;
+  requestAnimationFrame(fitBars);
+}
+
+// ===================== クラウド保存・読込 =====================
+let autoSaveTimer = null;
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => saveToCloud(), 2000);
+}
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzIF5t644kJuk4y558dTjD1S45Ut3I4P_nH_5Z_aHZ0YRO42Ye3h4Up7zoVL2rXsK38zw/exec';
+
+// 保存通知バー
+function showNotice(msg, type) {
+  let bar = document.getElementById('save-notice');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'save-notice';
+    bar.style.cssText = 'position:fixed;top:56px;left:0;right:0;z-index:500;padding:10px 20px;font-size:13px;font-weight:500;text-align:center;transition:opacity 0.4s;font-family:Noto Sans JP,sans-serif;';
+    document.body.appendChild(bar);
+  }
+  bar.textContent = msg;
+  bar.style.background = type === 'ok' ? '#16a34a' : type === 'err' ? '#dc2626' : '#2b5ce6';
+  bar.style.color = '#fff';
+  bar.style.opacity = '1';
+  clearTimeout(bar._t);
+  if (type !== 'loading') bar._t = setTimeout(() => bar.style.opacity = '0', 2500);
+}
+
+// データをスプレッドシートに保存（POST方式）
+async function saveToCloud() {
+  showNotice('保存中…', 'loading');
+  const rows = [];
+  projects.forEach(proj => {
+    proj.rows.forEach(row => {
+      rows.push({
+        projId: proj.id,
+        projName: proj.name,
+        staff: Array.isArray(proj.staff) ? proj.staff.join(',') : (proj.staff || ''),
+        phase: row.phase,
+        start: row.start,
+        end: row.end,
+        updatedAt: proj.updatedAt || proj.createdAt || ''
+      });
+    });
+    if (proj.rows.length === 0) {
+      rows.push({ projId: proj.id, projName: proj.name, staff: Array.isArray(proj.staff) ? proj.staff.join(',') : (proj.staff || ''), phase:'', start:'', end:'', updatedAt: proj.updatedAt || proj.createdAt || '' });
+    }
+  });
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'save', rows })
+    });
+    const json = await res.json();
+    if (json.status === 'ok') {
+      showNotice('✓ 保存しました', 'ok');
+    } else {
+      showNotice('保存に失敗しました', 'err');
+    }
+  } catch(e) {
+    showNotice('保存に失敗しました', 'err');
+  }
+}
+
+// スプレッドシートからデータを読み込み
+async function loadFromCloud() {
+  showNotice('データを読み込み中…', 'loading');
+  try {
+    const res = await fetch(GAS_URL + '?t=' + Date.now());
+    const json = await res.json();
+    if (!json.data || json.data.length === 0) {
+      // クラウドが空 → 初期データを使用
+      showNotice('初期データを表示しています', 'ok');
+      return false;
+    }
+    // projIdでグループ化
+    const projMap = {};
+    const projOrder = [];
+    json.data.forEach(row => {
+      const pid = String(row.projId);
+      if (!projMap[pid]) {
+        projMap[pid] = { id: Number(row.projId)||Date.now(), name: row.projName, staff: row.staff ? String(row.staff).split(',').filter(s=>s) : [], rows: [], createdAt: row.updatedAt, updatedAt: row.updatedAt };
+        projOrder.push(pid);
+      }
+      if (row.phase) {
+        // 日付をYYYY-MM-DD形式に正規化
+        const normDate = (d) => {
+          if (!d) return '';
+          const s = String(d);
+          // ISO形式（2026-03-31T15:00:00.000Z）の場合は日付部分だけ取る
+          if (s.includes('T')) return s.split('T')[0];
+          // スラッシュ区切り（2026/03/31）の場合はハイフンに変換
+          if (s.includes('/')) return s.replace(/\//g, '-');
+          return s;
+        };
+        projMap[pid].rows.push({ id: Date.now() + Math.random(), phase: row.phase, start: normDate(row.start), end: normDate(row.end), isCustomInput: false });
+      }
+      if (row.updatedAt) projMap[pid].updatedAt = row.updatedAt;
+    });
+    projects = projOrder.map(pid => projMap[pid]);
+    counter = Math.max(...projects.map(p => p.id), 0);
+    renderAll();
+    showNotice('✓ データを読み込みました', 'ok');
+    setTimeout(() => generateChart(), 100);
+    return true;
+  } catch(e) {
+    showNotice('オフラインモード（初期データを表示）', 'ok');
+    setTimeout(() => generateChart(), 100);
+    return false;
+  }
+}
+
+// ===================== 編集中チェック =====================
+let lockCheckInterval = null;
+let myUsername = '';
+
+async function checkEditingLock() {
+  try {
+    const res = await fetch(GAS_URL + '?action=checkLock&t=' + Date.now());
+    const json = await res.json();
+    const notice = document.getElementById('editing-notice');
+    if (json.locked && json.user !== myUsername) {
+      notice.style.display = 'block';
+      notice.textContent = `⚠ 現在「${json.user}」さんが編集中です。しばらくお待ちください。`;
+      return true; // 他の人がロック中
+    } else {
+      notice.style.display = 'none';
+      return false; // ロックなし
+    }
+  } catch(e) { return false; }
+}
+
+async function acquireLock() {
+  if (!myUsername) return;
+  try {
+    await fetch(GAS_URL + `?action=lock&user=${encodeURIComponent(myUsername)}&t=` + Date.now());
+  } catch(e) { /* 無視 */ }
+}
+
+async function releaseLock() {
+  if (!myUsername) return;
+  try {
+    await fetch(GAS_URL + '?action=unlock&t=' + Date.now());
+  } catch(e) { /* 無視 */ }
+}
+
+function startLockHeartbeat() {
+  // 2分ごとにロックを更新（3分でタイムアウトなので）
+  lockCheckInterval = setInterval(() => acquireLock(), 2 * 60 * 1000);
+}
+
+// ページを離れる際にロック解除
+window.addEventListener('beforeunload', () => releaseLock());
+
+function exportHTML() {
+  const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `dental_schedule_${todayStr()}.html`;
+  a.click();
+}
+
+// 初期データ
+const INITIAL_DATA = [
+  {
+    id: 1,
+    name: '仙台総合歯科医院',
+    staff: ['雨谷'],
+    createdAt: '2026/04/21 14:23',
+    updatedAt: '2026/04/21 14:24',
+    rows: [
+      { id: 101, phase: '工事', start: '2025-08-18', end: '2026-04-30', isCustomInput: false }
+    ]
+  },
+  {
+    id: 2,
+    name: 'いがらし歯科医院',
+    staff: ['雨谷'],
+    createdAt: '2026/04/21 14:24',
+    updatedAt: '2026/04/21 14:27',
+    rows: [
+      { id: 201, phase: '実施設計', start: '2026-03-02', end: '2026-04-24', isCustomInput: false },
+      { id: 202, phase: '実施見積', start: '2026-04-25', end: '2026-06-11', isCustomInput: false },
+      { id: 203, phase: '仕様決定', start: '2026-06-12', end: '2026-07-09', isCustomInput: false },
+      { id: 204, phase: '準備',     start: '2026-07-10', end: '2026-07-15', isCustomInput: false },
+      { id: 205, phase: '工事',     start: '2026-07-16', end: '2026-09-30', isCustomInput: false }
+    ]
+  }
+];
+
+// ユーザー名を取得（担当者から選択）
+function initUsername() {
+  const saved = localStorage.getItem('styleh_username');
+  if (saved) {
+    myUsername = saved;
+    startLockCheck();
+    return;
+  }
+  // 初回のみ名前を入力
+  const name = prompt('あなたのお名前を入力してください（担当者名）\n例：雨谷、大良、辻川') || '';
+  myUsername = name.trim();
+  if (myUsername) {
+    localStorage.setItem('styleh_username', myUsername);
+    startLockCheck();
+  }
+}
+
+function startLockCheck() {
+  // まず他の人が編集中かチェック
+  checkEditingLock().then(isLocked => {
+    if (!isLocked) {
+      // 誰も編集していなければ自分のロックを取得
+      acquireLock();
+    }
+  });
+  // 30秒ごとに編集中チェック＋ロック更新
+  setInterval(() => {
+    checkEditingLock().then(isLocked => {
+      if (!isLocked) acquireLock();
+    });
+  }, 30 * 1000);
+  startLockHeartbeat();
+}
+
+// まず初期データを即座に表示
+projects = JSON.parse(JSON.stringify(INITIAL_DATA));
+counter = 2;
+renderAll();
+
+// バックグラウンドでクラウドから読み込み（データがあれば上書き・スケジュールも自動生成）
+loadFromCloud();
+// ユーザー名取得・編集中チェック開始
+setTimeout(initUsername, 500);
+</script>
+</body>
+</html>
