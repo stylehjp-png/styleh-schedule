@@ -1107,7 +1107,9 @@ function generateChart() {
   </div>`;
 
   requestAnimationFrame(fitBars);
-  out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const headerHeight = 56 + 16; // ヘッダー＋余白
+  const chartTop = out.getBoundingClientRect().top + window.pageYOffset - headerHeight;
+  window.scrollTo({ top: chartTop, behavior: 'smooth' });
 }
 
 function scrollToProject(projId) {
@@ -1119,8 +1121,8 @@ function scrollToProject(projId) {
     }
   });
   if (targetCard) {
-    // ヘッダー・通知バー分のオフセットを考慮してスクロール
-    const headerHeight = 56 + 44 + 16; // header + 通知バー余裕 + 余白
+    // ヘッダー(56px) + 余白(16px) を引いてプロジェクト名が見える位置に
+    const headerHeight = 56 + 16;
     const cardTop = targetCard.getBoundingClientRect().top + window.pageYOffset - headerHeight;
     window.scrollTo({ top: cardTop, behavior: 'smooth' });
     // ハイライト効果
