@@ -1111,7 +1111,6 @@ function generateChart() {
 }
 
 function scrollToProject(projId) {
-  // プロジェクトカードを探してスクロール
   const cards = document.querySelectorAll('.project-card');
   let targetCard = null;
   projects.forEach((proj, idx) => {
@@ -1120,7 +1119,10 @@ function scrollToProject(projId) {
     }
   });
   if (targetCard) {
-    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // ヘッダー・通知バー分のオフセットを考慮してスクロール
+    const headerHeight = 56 + 44 + 16; // header + 通知バー余裕 + 余白
+    const cardTop = targetCard.getBoundingClientRect().top + window.pageYOffset - headerHeight;
+    window.scrollTo({ top: cardTop, behavior: 'smooth' });
     // ハイライト効果
     targetCard.style.outline = '2px solid var(--accent)';
     setTimeout(() => { targetCard.style.outline = ''; }, 1500);
