@@ -369,7 +369,8 @@ body.print-schedule-only .main > div[style*='margin-top'] { display: none !impor
   </div>
 </div>
 <div class="cal-overlay"  id="cal-overlay" onclick="closeCalOverlay()"></div>
-<div id="editing-notice" style="display:none;position:fixed;top:56px;left:0;right:0;z-index:99;background:#f59e0b;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:500;font-family:'Noto Sans JP',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.15)"></div>
+<div id="editing-notice" style="display:none;position:fixed;top:56px;left:0;right:0;z-index:99;background:#f59e0b;color:#fff;text-align:center;padding:8px;font-size:13px;font-weight:500;font-family:'Noto Sans JP',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.15)"></div>
+<div id="online-notice" style="position:fixed;top:56px;left:0;right:0;z-index:98;background:#1e40af;color:#fff;text-align:center;padding:6px;font-size:12px;font-family:'Noto Sans JP',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.1)"></div>
 <div class="main">
   <!-- スケジュールを最上位に表示 -->
   <div id="chart-output"></div>
@@ -486,7 +487,7 @@ function nowStr() {
   const d = new Date();
   return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}時${String(d.getMinutes()).padStart(2,'0')}分`;
 }
-function touchProject(proj) { proj.updatedAt = nowStr(); scheduleAutoSave(); if(myUsername) acquireLock(); }
+function touchProject(proj) { proj.updatedAt = nowStr(); scheduleAutoSave(); if(myUsername) acquireLock('editing'); }
 
 function addProject() {
   const id = ++counter;
@@ -1467,34 +1468,91 @@ async function checkEditingLock() {
     const res = await fetch(GAS_URL + '?action=checkLock&t=' + Date.now());
     const json = await res.json();
     const notice = document.getElementById('editing-notice');
+    const onlineNotice = document.getElementById('online-notice');
+
+    // 編集中警告
     if (json.locked && json.user !== myUsername) {
       notice.style.display = 'block';
-      notice.textContent = `⚠ 現在「${json.user}」さんが編集中です。しばらくお待ちください。`;
-      return true; // 他の人がロック中
+      notice.textContent = `⚠ 現在「${json.user}」さんが編集中です。編集が完了するまでお待ちください。`;
+      // 編集中の場合はオンライン通知を下にずらす
+      onlineNotice.style.top = '96px';
+      setEditingLocked(true);
     } else {
       notice.style.display = 'none';
-      return false; // ロックなし
+      onlineNotice.style.top = '56px';
+      setEditingLocked(false);
     }
+
+    // オンラインユーザー表示（自分以外）
+    const onlineUsers = (json.onlineUsers || []).filter(u => u !== myUsername);
+    if (onlineUsers.length > 0) {
+      const names = onlineUsers.map(u => `「${u}」`).join('と');
+      onlineNotice.style.display = 'block';
+      onlineNotice.textContent = `👥 現在 ${names}さんもアプリを開いています`;
+      // メインコンテンツを下にずらす
+      const editingShown = notice.style.display === 'block';
+      document.querySelector('.main').style.marginTop = editingShown ? '80px' : '36px';
+    } else {
+      onlineNotice.style.display = 'none';
+      const editingShown = notice.style.display === 'block';
+      document.querySelector('.main').style.marginTop = editingShown ? '44px' : '';
+    }
+
+    return json.locked && json.user !== myUsername;
   } catch(e) { return false; }
 }
 
-async function acquireLock() {
+function setEditingLocked(locked) {
+  // オーバーレイで操作をブロック
+  let overlay = document.getElementById('lock-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'lock-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 56px; left: 0; right: 0; bottom: 0;
+      z-index: 98;
+      background: rgba(0,0,0,0.05);
+      cursor: not-allowed;
+      pointer-events: all;
+    `;
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = locked ? 'block' : 'none';
+
+  // ボトムバーのボタンも無効化
+  const bottomBtns = document.querySelectorAll('.bottom-bar button');
+  bottomBtns.forEach(btn => {
+    btn.disabled = locked;
+    btn.style.opacity = locked ? '0.4' : '';
+    btn.style.cursor = locked ? 'not-allowed' : '';
+  });
+
+  // ヘッダーの保存ボタンも無効化（読み込みは可能）
+  const saveBtns = document.querySelectorAll('button[onclick*="saveToCloud"], button[onclick*="addProject"]');
+  saveBtns.forEach(btn => {
+    btn.disabled = locked;
+    btn.style.opacity = locked ? '0.4' : '';
+  });
+}
+
+async function acquireLock(status = 'online') {
   if (!myUsername) return;
   try {
-    await fetch(GAS_URL + `?action=lock&user=${encodeURIComponent(myUsername)}&t=` + Date.now());
+    await fetch(GAS_URL + `?action=lock&user=${encodeURIComponent(myUsername)}&status=${status}&t=` + Date.now());
   } catch(e) { /* 無視 */ }
 }
 
 async function releaseLock() {
   if (!myUsername) return;
   try {
-    await fetch(GAS_URL + '?action=unlock&t=' + Date.now());
+    await fetch(GAS_URL + `?action=unlock&user=${encodeURIComponent(myUsername)}&t=` + Date.now());
   } catch(e) { /* 無視 */ }
 }
 
 function startLockHeartbeat() {
-  // 2分ごとにロックを更新（3分でタイムアウトなので）
-  lockCheckInterval = setInterval(() => acquireLock(), 2 * 60 * 1000);
+  // 8秒ごとにロックを更新（10秒でタイムアウトなので）
+  lockCheckInterval = setInterval(() => acquireLock(), 8 * 1000);
 }
 
 // ページを離れる際にロック解除
@@ -1561,12 +1619,12 @@ function startLockCheck() {
       acquireLock();
     }
   });
-  // 30秒ごとに編集中チェック＋ロック更新
+  // 10秒ごとに編集中チェック＋ロック更新
   setInterval(() => {
     checkEditingLock().then(isLocked => {
       if (!isLocked) acquireLock();
     });
-  }, 30 * 1000);
+  }, 10 * 1000);
   startLockHeartbeat();
 }
 
